@@ -21,7 +21,7 @@ function createGetter<T extends Component>(
       runInDebug(() => {
         const throwErrors = config['ember-arg-types']?.throwErrors;
         const shouldThrowErrors = isNone(throwErrors) ? true : throwErrors;
-        if (validator) {
+        if (validator && !this.isDestroyed && !this.isDestroying) {
           throwConsoleError(() => {
             PropTypes.checkPropTypes({ [key]: validator }, { [key]: returnValue }, 'prop', this.constructor.name);
           }, shouldThrowErrors);
