@@ -6,17 +6,21 @@ import PropTypes, { Validator } from 'prop-types';
 import config from 'ember-get-config';
 import { isNone } from '@ember/utils';
 
+const VALUE_UNSET = Symbol('value_unset');
+
 function createGetter<T extends Component>(
+  onlyOnce: boolean,
   _target: object,
   key: string,
   descriptor: any,
   validator?: Validator<any>
 ): PropertyDescriptor {
   const defaultInitializer = descriptor.initializer || descriptor.get || (() => undefined);
-  let lastvalue: any;
+
+  let lastvalue: any = VALUE_UNSET;
   return {
     get(this: T): any {
-      if(this.isDestroyed || this.isDestroying) {
+      if(onlyOnce && lastvalue !== VALUE_UNSET) {
         return lastvalue;
       }
       const argValue = (<any>this.args)[key];
@@ -41,11 +45,24 @@ export default function arg<T extends Component>(target: T, key: string): any;
 export default function arg(typeValidator?: Validator<any>, ...args: any[]): PropertyDecorator;
 export default function arg<T extends Component>(...args: any[]): any {
   if (isElementDescriptor(...args)) {
-    return createGetter(...(args as [T, string, PropertyDescriptor]));
+    return createGetter(false, ...(args as [T, string, PropertyDescriptor]));
   }
 
   const [validator] = args;
   return function argument<T extends Component>(...args: any[]): any {
-    return createGetter(...([...args, validator] as [T, string, any, Validator<any>?]));
+    return createGetter(false, ...([...args, validator] as [T, string, any, Validator<any>?]));
+  };
+}
+
+export function argCached<T extends Component>(target: T, key: string): any;
+export function argCached(typeValidator?: Validator<any>, ...args: any[]): PropertyDecorator;
+export function argCached<T extends Component>(...args: any[]): any {
+  if (isElementDescriptor(...args)) {
+    return createGetter(true, ...(args as [T, string, PropertyDescriptor]));
+  }
+
+  const [validator] = args;
+  return function argument<T extends Component>(...args: any[]): any {
+    return createGetter(true, ...([...args, validator] as [T, string, any, Validator<any>?]));
   };
 }
