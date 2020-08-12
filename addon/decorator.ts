@@ -13,21 +13,25 @@ function createGetter<T extends Component>(
   validator?: Validator<any>
 ): PropertyDescriptor {
   const defaultInitializer = descriptor.initializer || descriptor.get || (() => undefined);
+  let lastvalue: any;
   return {
     get(this: T): any {
+      if(this.isDestroyed || this.isDestroying) {
+        return lastvalue;
+      }
       const argValue = (<any>this.args)[key];
       const returnValue = argValue !== undefined ? argValue : defaultInitializer.call(this);
 
       runInDebug(() => {
         const throwErrors = config['ember-arg-types']?.throwErrors;
         const shouldThrowErrors = isNone(throwErrors) ? true : throwErrors;
-        if (validator && !this.isDestroyed && !this.isDestroying) {
+        if (validator) {
           throwConsoleError(() => {
             PropTypes.checkPropTypes({ [key]: validator }, { [key]: returnValue }, 'prop', this.constructor.name);
           }, shouldThrowErrors);
         }
       });
-
+      lastvalue = returnValue;
       return returnValue;
     }
   };
